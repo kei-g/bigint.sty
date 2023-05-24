@@ -1,0 +1,210 @@
+\NeedsTeXFormat{LaTeX2e}[1999/12/01]
+\ProvidesPackage{bigint}[2023/05/24 v1.0 Initial release]
+
+% Indices
+\newcounter{@bigint@i}
+\newcounter{@bigint@j}
+
+% Quotient
+\newcounter{@bigint@q}
+
+% For multiplication and division
+\newcount\@bigint@tex
+
+% Adds bigint
+\newcommand{\@bigint@add}[4]{%
+  \expandafter\ifnum\csname the#2\endcsname<#4%
+    \edef\@m{#4}%
+  \else%
+    \edef\@m{\csname the#2\endcsname}%
+  \fi%
+  \setcounter{@bigint@j}{0}%
+  \@bigint@loop{@bigint@i}{0}{\@m}{%
+    \expandafter\ifnum\the@bigint@i<\csname the#2\endcsname%
+      \addtocounter{@bigint@j}{\csname #1@\the@bigint@i\endcsname}%
+    \fi%
+    \expandafter\ifnum\the@bigint@i<#4%
+      \addtocounter{@bigint@j}{\csname #3@\the@bigint@i\endcsname}%
+    \fi%
+    \@bigint@divmod{\the@bigint@j}{10}%
+    \edef\@r{\the\@bigint@tex}%
+    \expandafter\let\csname #1@\the@bigint@i\endcsname=\@r%
+    \setcounter{@bigint@j}{\the@bigint@q}%
+  }%
+  \setcounter{#2}{\@m}%
+  \loop\ifnum\the@bigint@j>0%
+    \@bigint@divmod{\the@bigint@j}{10}%
+    \edef\@r{\the\@bigint@tex}%
+    \expandafter\let\csname #1@\the@bigint@i\endcsname=\@r%
+    \setcounter{@bigint@j}{\the@bigint@q}%
+    \addtocounter{#2}{1}%
+    \addtocounter{@bigint@i}{1}%
+  \repeat%
+}
+
+% Divides #1 by #2
+%   the quotient is set to @bigint@q
+%   the remainder is set to \@bigint@tex
+\newcommand{\@bigint@divmod}[2]{%
+  \@bigint@tex=#1%
+  \divide\@bigint@tex by #2%
+  \setcounter{@bigint@q}{\the\@bigint@tex}%
+  \multiply\@bigint@tex by #2%
+  \multiply\@bigint@tex by -1%
+  \advance\@bigint@tex by #1%
+}
+
+% Run #2 if every characters in #1 are digit, otherwise #3
+\newcommand{\@bigint@ifnum}[3]{%
+  \def\@t{\relax}%
+  \@tfor\@c:=#1\do{%
+    \ifcat 0\@c\else
+      \expandafter\ifx\@t\relax%
+        \let\@t=\@bigint@ifnum%
+      \fi%
+    \fi%
+  }%
+  \expandafter\ifx\@t\relax%
+    #2%
+  \else%
+    #3%
+  \fi%
+}
+
+% Loads from #3 into #1 counting items to #2
+\newcommand{\@bigint@load}[3]{%
+  \setcounter{#2}{0}%
+  \@tfor\@d:=#3\do{%
+    \edef\@i{\csname the#2\endcsname}%
+    \expandafter\let\csname #1@\@i\endcsname=\@d%
+    \addtocounter{#2}{1}%
+  }%
+  \@bigint@load@l=0%
+  \@bigint@load@r=\csname the#2\endcsname%
+  \loop\ifnum\the\@bigint@load@l<\the\@bigint@load@r%
+    \edef\@l{\csname #1@\the\@bigint@load@l\endcsname}%
+    \advance\@bigint@load@r by -1%
+    \edef\@r{\csname #1@\the\@bigint@load@r\endcsname}%
+    \expandafter\let\csname #1@\the\@bigint@load@l\endcsname=\@r%
+    \expandafter\let\csname #1@\the\@bigint@load@r\endcsname=\@l%
+    \advance\@bigint@load@l by 1%
+  \repeat%
+}
+\newcount\@bigint@load@l%
+\newcount\@bigint@load@r%
+
+% Loops from #2(inclusive) to #3(exclusive) for a counter @bigint@#1, and extract #4 for each run
+\newcommand{\@bigint@loop}[4]{%
+  \setcounter{#1}{#2}%
+  \loop\ifnum\csname the#1\endcsname<#3%
+    #4%
+    \addtocounter{#1}{1}%
+  \repeat%
+}
+
+% Multiplies bigint
+\newcommand{\@bigint@mul}[4]{%
+  % convolute
+  \@bigint@tex=\csname the#2\endcsname%
+  \multiply\@bigint@tex by #4%
+  \edef\@m{\the\@bigint@tex}%
+  \@bigint@loop{@bigint@i}{0}{\@m}{%
+    % separate index into @i and @j
+    \@bigint@divmod{\the@bigint@i}{#4}%
+    \edef\@i{\the@bigint@q}%
+    \edef\@j{\the\@bigint@tex}%
+
+    % multiply
+    \@bigint@tex=\csname #1@\@i\endcsname%
+    \multiply\@bigint@tex by \csname #3@\@j\endcsname%
+
+    % add to @cnvl
+    \setcounter{@bigint@j}{\@i}%
+    \addtocounter{@bigint@j}{\@j}%
+    \edef\@d{\the@bigint@j}%
+    \expandafter\providecommand\csname @bigint@cnvl@\@d\endcsname{0}%
+    \advance\@bigint@tex by \csname @bigint@cnvl@\@d\endcsname%
+    \edef\@v{\the\@bigint@tex}%
+    \expandafter\let\csname @bigint@cnvl@\@d\endcsname=\@v%
+  }%
+
+  % carry up
+  \@bigint@tex=\csname the#2\endcsname%
+  \advance\@bigint@tex by #4%
+  \advance\@bigint@tex by -1%
+  \edef\@m{\the\@bigint@tex}%
+  \setcounter{@bigint@i}{0}%
+  \setcounter{@bigint@q}{0}%
+  \loop\ifnum\the@bigint@i<\@m%
+    \setcounter{@bigint@j}{\csname @bigint@cnvl@\the@bigint@i\endcsname}%
+    \addtocounter{@bigint@j}{\the@bigint@q}%
+    \@bigint@divmod{\the@bigint@j}{10}%
+    \edef\@r{\the\@bigint@tex}%
+    \expandafter\let\csname #1@\the@bigint@i\endcsname=\@r%
+    \addtocounter{@bigint@i}{1}%
+  \repeat%
+  \loop\ifnum\the@bigint@q>0%
+    \setcounter{@bigint@j}{\the@bigint@q}%
+    \@bigint@divmod{\the@bigint@j}{10}%
+    \edef\@r{\the\@bigint@tex}%
+    \expandafter\let\csname #1@\the@bigint@i\endcsname=\@r%
+    \addtocounter{@bigint@i}{1}%
+  \repeat%
+  \setcounter{#2}{\the@bigint@i}%
+}
+
+% Advances bigint by the specified value
+\newcommand{\bigintAdd}[2]{%
+  \@bigint@ifnum{#2}{%
+    \@bigint@load{@bigint@arg}{@bigint@i}{#2}%
+    \edef\@n{\the@bigint@i}%
+    \@bigint@add{@bigint@v@#1}{@bigint@c@#1}{@bigint@arg}{\@n}%
+  }{%
+    \edef\@n{\csname the@bigint@c@#2\endcsname}%
+    \@bigint@add{@bigint@v@#1}{@bigint@c@#1}{@bigint@v@#2}{\@n}%
+  }%
+}
+
+% Multiplies bigint by the specified value
+\newcommand{\bigintMul}[2]{%
+  \@bigint@ifnum{#2}{%
+    \@bigint@load{@bigint@arg}{@bigint@i}{#2}%
+    \edef\@n{\the@bigint@i}%
+    \@bigint@mul{@bigint@v@#1}{@bigint@c@#1}{@bigint@arg}{\@n}%
+  }{%
+    \edef\@n{\csname the@bigint@c@#2\endcsname}%
+    \@bigint@mul{@bigint@v@#1}{@bigint@c@#1}{@bigint@v@#2}{\@n}%
+  }%
+}
+
+% Declares a new bigint
+\newcommand{\bigintNew}[1]{%
+  \newcounter{@bigint@c@#1}%
+  \setcounter{@bigint@c@#1}{0}%
+  \expandafter\newcommand\csname the#1\endcsname{%
+    \edef\@c{\csname the@bigint@c@#1\endcsname}%
+    \setcounter{@bigint@j}{\@c}%
+    \@bigint@loop{@bigint@i}{0}{\@c}{%
+      \addtocounter{@bigint@j}{-1}%
+      \csname @bigint@v@#1@\the@bigint@j\endcsname%
+    }%
+  }%
+}
+
+% Sets a value to bigint
+\newcommand{\bigintSet}[2]{%
+  \@bigint@ifnum{#2}{%
+    \@bigint@load{@bigint@v@#1}{@bigint@c@#1}{#2}%
+  }{%
+    \edef\@n{\csname the@bigint@c@#2\endcsname}%
+    \@bigint@loop{@bigint@i}{0}{\@n}{%
+      \edef\@v{\csname @bigint@v@#2@\the@bigint@i\endcsname}%
+      \expandafter\let\csname @bigint@v@#1@\the@bigint@i\endcsname=\@v%
+    }%
+    \setcounter{@bigint@c@#1}{\@n}%
+  }%
+}
+
+\endinput
+%%
+%% End of file `bigint.sty'.

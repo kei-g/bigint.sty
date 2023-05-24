@@ -1,0 +1,23 @@
+\documentclass{article}
+
+\usepackage{bigint}
+
+\bigintNew{foo}
+\bigintSet{foo}{271828}
+
+\bigintNew{bar}
+\bigintSet{bar}{foo}
+
+\begin{document}
+
+{\texttt{foo}}=\thefoo\LaTeX
+
+{\texttt{bar}}=\thebar\LaTeX
+
+\bigintMul{foo}{17}
+${\texttt{foo}}\times 17$=\thefoo\LaTeX
+
+\bigintAdd{bar}{314159265}
+${\texttt{bar}}+314159265$=\thebar\LaTeX
+
+\end{document}

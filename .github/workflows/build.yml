@@ -1,0 +1,25 @@
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+      - name: Compile
+        uses: xu-cheng/latex-action@v2
+        with:
+          root_file: |
+            example.tex
+      - name: Upload the pdf
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.event.repository.name }}-example
+          path: |
+            example.pdf
+name: Build
+on:
+  push:
+    branches:
+      - main
